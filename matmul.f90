@@ -2,7 +2,7 @@ program matmul
     implicit none
 
     integer, parameter :: n = 10
-    real(8), dimension(n) :: a, b, c
+    real(8), dimension(n,n) :: a, b, c
     integer :: i, j
 
     ! Initialize values of input matrices
@@ -13,4 +13,7 @@ program matmul
         end do
     end do
 
+    call dgemm("N", "N", n, n, n, 1.0d0, a, n, b, n, 0.0d0, c, n)
+
+    write (*,*) "C matrix Frobenius norm = ", norm2(c)
 end program
