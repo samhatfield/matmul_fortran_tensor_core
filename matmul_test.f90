@@ -1,4 +1,6 @@
 program matmul_test
+    use cublas_gemm_f, only: tcgemm
+
     implicit none
 
     ! Size of matrices
@@ -6,9 +8,6 @@ program matmul_test
 
     ! Host matrices
     real(8), dimension(n,n) :: a, b, c
-
-    ! Pointers to device matrices
-    integer(8) :: a_d, b_d, c_d
 
     integer :: i, j
 
@@ -32,25 +31,10 @@ program matmul_test
     ! Device DGEMM
     ! =========================================================================
 
-    ! Allocate memory on device and transfer input data from host
-    call cublas_alloc(n*n, 8, a_d)
-    call cublas_alloc(n*n, 8, b_d)
-    call cublas_alloc(n*n, 8, c_d)
-    call cublas_set_matrix(n, n, 8, a, n, a_d, n)
-    call cublas_set_matrix(n, n, 8, b, n, b_d, n)
-
-    ! Call DGEMM routine
-    call cublas_dgemm("N", "N", n, n, n, 1.0d0, a_d, n, b_d, n, 0.0d0, c_d, n)
-
-    ! Transfer results back to host
-    call cublas_get_matrix(n, n, 8, c_d, n, c, n)
+    ! Call Tensor Core GEMM routine
+    call tcgemm("N", "N", n, n, n, 1.0d0, a, n, b, n, 0.0d0, c, n)
 
     write (*,"(A35,F13.10)") "C matrix Frobenius norm (device) = ", frob_norm(c)
-
-    ! Free GPU memory
-    call cublas_free(a_d)
-    call cublas_free(b_d)
-    call cublas_free(c_d)
 
 contains
     ! Computes Frobenius norm of input matrix
