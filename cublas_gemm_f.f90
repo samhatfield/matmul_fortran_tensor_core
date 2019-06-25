@@ -37,4 +37,3 @@ contains
         call tcgemm_c("N", "N", n, n, n, 1.0d0, a_p, n, b_p, n, 0.0d0, c_p, n)
     end subroutine
 end module
-
