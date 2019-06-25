@@ -27,7 +27,7 @@ __global__ void double2half(half *out, const double *in, int n) {
 
 // Performs matrix-matrix multiplication using Tensor Core.
 extern "C" {
-    void tcgemm_c(char transa, char transb, int m, int n, int k, float alpha, void *a_p, int lda, void *b_p,
+    void tcgemm_c(int transa, int transb, int m, int n, int k, float alpha, void *a_p, int lda, void *b_p,
                 int ldb, float beta, void *c_p, int ldc) {
 
         // Set up host-side arrays
@@ -70,14 +70,11 @@ extern "C" {
 
         cudaDeviceSynchronize();
 
-        cublasOperation_t transa_op = (transa == 'N' || transa == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T;
-        cublasOperation_t transb_op = (transb == 'N' || transb == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T;
-
         // Perform GEMM with Tensor Core
         cublasErrCheck(cublasSetMathMode(cublasHandle, CUBLAS_TENSOR_OP_MATH));
         cublasErrCheck(
                 cublasGemmEx(
-                        cublasHandle, transa_op, transb_op,
+                        cublasHandle, (cublasOperation_t)transa, (cublasOperation_t)transb,
                         m, n, k,
                         &alpha,
                         a_d_16, CUDA_R_16F, lda,
