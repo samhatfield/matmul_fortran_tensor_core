@@ -7,15 +7,17 @@ program matmul_test
     integer, parameter :: n = 10
 
     ! Host matrices
-    real(8), dimension(n,n) :: a, b, c
+    real(8), dimension(n,n) :: a1, b1, c1, a2, b2, c2
 
     integer :: i, j
 
     ! Initialize values of input matrices
     do i = 1, n
         do j = 1, n
-            call random_number(a(i,j))
-            call random_number(b(i,j))
+            call random_number(a1(i,j))
+            call random_number(b1(i,j))
+            a2(i,j) = a1(i,j)
+            b2(i,j) = b1(i,j)
         end do
     end do
 
@@ -23,18 +25,18 @@ program matmul_test
     ! Host DGEMM
     ! =========================================================================
 
-    c = matmul(a, b)
+    c1 = matmul(a1, b1)
 
-    write (*,"(A35,F13.10)") "C matrix Frobenius norm (host)   = ", frob_norm(c)
+    write (*,"(A35,F13.10)") "C matrix Frobenius norm (host)   = ", frob_norm(c1)
 
     ! =========================================================================
     ! Device DGEMM
     ! =========================================================================
 
     ! Call Tensor Core GEMM routine
-    call tcgemm("N", "N", n, n, n, 1.0d0, a, n, b, n, 0.0d0, c, n)
+    call tcgemm("N", "N", n, n, n, 1.0d0, a2, n, b2, n, 0.0d0, c2, n)
 
-    write (*,"(A35,F13.10)") "C matrix Frobenius norm (device) = ", frob_norm(c)
+    write (*,"(A35,F13.10)") "C matrix Frobenius norm (device) = ", frob_norm(c2)
 
 contains
     ! Computes Frobenius norm of input matrix
