@@ -26,6 +26,7 @@ extern "C" {
         double *a_h, *b_h, *c_h;
         a_h = (double *)a_p;
         b_h = (double *)b_p;
+        c_h = (double *)c_p;
     
         // =========================================================================
         // Compute GEMM using Tensor Core
@@ -71,10 +72,15 @@ extern "C" {
         // Copy results back from device to host
         cudaErrCheck(cudaMemcpy(c_h, c_d, m*n*sizeof(double), cudaMemcpyDeviceToHost));
         cudaDeviceSynchronize();
+
+        // Free memory on device
+        cudaErrCheck(cudaFree(a_d));
+        cudaErrCheck(cudaFree(b_d));
+        cudaErrCheck(cudaFree(c_d));
     
         // =========================================================================
     
         // Set incoming C array pointer
-        c_p = (void *)c_h;
+        //c_p = (void *)c_h;
     }
 }
