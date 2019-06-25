@@ -51,13 +51,13 @@ extern "C" {
         cudaErrCheck(cudaMemcpy(a_d, a_h, m*k*sizeof(double), cudaMemcpyHostToDevice));
         cudaErrCheck(cudaMemcpy(b_d, b_h, k*n*sizeof(double), cudaMemcpyHostToDevice));
     
-        cublasOperation_t transa_int = (transa == 'N' || transa == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T;
-        cublasOperation_t transb_int = (transb == 'N' || transb == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T;
+        cublasOperation_t transa_op = (transa == 'N' || transa == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T;
+        cublasOperation_t transb_op = (transb == 'N' || transb == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T;
     
         // Perform GEMM
         cublasErrCheck(
                 cublasGemmEx(
-                        cublasHandle, transa_int, transb_int,
+                        cublasHandle, transa_op, transb_op,
                         m, n, k,
                         &alpha,
                         a_d, CUDA_R_64F, lda,
