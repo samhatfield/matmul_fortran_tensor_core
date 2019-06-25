@@ -3,7 +3,7 @@ FC = gfortran
 NVCC = nvcc
 
 matmul_test: matmul_test.o cublas_gemm_f.o cublas_gemm_c.o
-	$(FC) matmul_test.o cublas_gemm_f.o cublas_gemm_c.o -L$(CUDA)/lib64 -lcudart -lcublas -o matmul_test
+	$(FC) matmul_test.o cublas_gemm_f.o cublas_gemm_c.o -L$(CUDA)/lib64 -lcudart -lcublas -lstdc++ -o matmul_test
 
 matmul_test.o: cublas_gemm_f.o
 

@@ -7,7 +7,8 @@ program matmul_test
     integer, parameter :: n = 10
 
     ! Host matrices
-    real(8), dimension(n,n) :: a1, b1, c1, a2, b2, c2
+    real(8), dimension(n,n) :: a1, b1, c1, a2, b2
+    real(4), dimension(n,n) :: c2
 
     integer :: i, j
 
@@ -34,9 +35,9 @@ program matmul_test
     ! =========================================================================
 
     ! Call Tensor Core GEMM routine
-    call tcgemm("N", "N", n, n, n, 1.0d0, a2, n, b2, n, 0.0d0, c2, n)
+    call tcgemm("N", "N", n, n, n, 1.0, a2, n, b2, n, 0.0, c2, n)
 
-    write (*,"(A35,F13.10)") "C matrix Frobenius norm (device) = ", frob_norm(c2)
+    write (*,"(A35,F13.10)") "C matrix Frobenius norm (device) = ", frob_norm(real(c2,8))
 
 contains
     ! Computes Frobenius norm of input matrix

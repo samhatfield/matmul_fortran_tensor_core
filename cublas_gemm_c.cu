@@ -17,16 +17,25 @@ void cublasErrCheck_(cublasStatus_t stat, const char *file, int line) {
     }
 }
 
+// Converts from double-precision to half-precision (CUDA kernel)
+__global__ void double2half(half *out, const double *in, int n) {
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < n) {
+        out[idx] = __float2half((float)(in[idx]));
+    }
+}
+
 // Performs matrix-matrix multiplication using Tensor Core.
 extern "C" {
-    void tcgemm_c(char transa, char transb, int m, int n, int k, double alpha, void *a_p, int lda, void *b_p,
-                int ldb, double beta, void *c_p, int ldc) {
+    void tcgemm_c(char transa, char transb, int m, int n, int k, float alpha, void *a_p, int lda, void *b_p,
+                int ldb, float beta, void *c_p, int ldc) {
 
         // Set up host-side arrays
-        double *a_h, *b_h, *c_h;
+        double *a_h, *b_h;
+        float *c_h;
         a_h = (double *)a_p;
         b_h = (double *)b_p;
-        c_h = (double *)c_p;
+        c_h = (float *)c_p;
 
         // =========================================================================
         // Compute GEMM using Tensor Core
@@ -39,48 +48,56 @@ extern "C" {
         cublasErrCheck(cublasCreate(&cublasHandle));
 
         // Set up device-side arrays
-        double *a_d, *b_d, *c_d;
+        double *a_d, *b_d;
+        half *a_d_16, *b_d_16;
+        float *c_d_32;
 
         // Allocate memory on device for all arrays
         // TODO: should the dimensions used below (m*k etc.) take into account transa, lda etc.?
         cudaErrCheck(cudaMalloc((void **)&a_d, m*k*sizeof(double)));
         cudaErrCheck(cudaMalloc((void **)&b_d, k*n*sizeof(double)));
-        cudaErrCheck(cudaMalloc((void **)&c_d, m*n*sizeof(double)));
+        cudaErrCheck(cudaMalloc((void**)&a_d_16, m*k*sizeof(half)));
+        cudaErrCheck(cudaMalloc((void**)&b_d_16, k*n*sizeof(half)));
+        cudaErrCheck(cudaMalloc((void**)&c_d_32, m*n*sizeof(float)));
 
         // Copy input arrays to device
         cudaErrCheck(cudaMemcpy(a_d, a_h, m*k*sizeof(double), cudaMemcpyHostToDevice));
         cudaErrCheck(cudaMemcpy(b_d, b_h, k*n*sizeof(double), cudaMemcpyHostToDevice));
 
+        // Convert arrays to half-precision
+        double2half<<<(int)((m*k)/256) + 1, 256 >>>(a_d_16, a_d, m*k);
+        double2half<<<(int)((k*n)/256) + 1, 256 >>>(b_d_16, b_d, k*n);
+
+        cudaDeviceSynchronize();
+
         cublasOperation_t transa_op = (transa == 'N' || transa == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T;
         cublasOperation_t transb_op = (transb == 'N' || transb == 'n') ? CUBLAS_OP_N : CUBLAS_OP_T;
 
-        // Perform GEMM
+        // Perform GEMM with Tensor Core
+        cublasErrCheck(cublasSetMathMode(cublasHandle, CUBLAS_TENSOR_OP_MATH));
         cublasErrCheck(
                 cublasGemmEx(
                         cublasHandle, transa_op, transb_op,
                         m, n, k,
                         &alpha,
-                        a_d, CUDA_R_64F, lda,
-                        b_d, CUDA_R_64F, ldb,
+                        a_d_16, CUDA_R_16F, lda,
+                        b_d_16, CUDA_R_16F, ldb,
                         &beta,
-                        c_d, CUDA_R_64F, ldc,
-                        CUDA_R_64F,
-                        CUBLAS_GEMM_DEFAULT
+                        c_d_32, CUDA_R_32F, ldc,
+                        CUDA_R_32F,
+                        CUBLAS_GEMM_DEFAULT_TENSOR_OP
                 )
         );
 
         // Copy results back from device to host
-        cudaErrCheck(cudaMemcpy(c_h, c_d, m*n*sizeof(double), cudaMemcpyDeviceToHost));
+        cudaErrCheck(cudaMemcpy(c_h, c_d_32, m*n*sizeof(float), cudaMemcpyDeviceToHost));
         cudaDeviceSynchronize();
 
         // Free memory on device
         cudaErrCheck(cudaFree(a_d));
         cudaErrCheck(cudaFree(b_d));
-        cudaErrCheck(cudaFree(c_d));
-
-        // =========================================================================
-
-        // Set incoming C array pointer
-        //c_p = (void *)c_h;
+        cudaErrCheck(cudaFree(a_d_16));
+        cudaErrCheck(cudaFree(b_d_16));
+        cudaErrCheck(cudaFree(c_d_32));
     }
 }
