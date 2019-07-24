@@ -40,6 +40,6 @@ contains
         transb_l = merge(0, 1, transb == "N" .or. transb == "n")
 
         ! Call C function
-        call tcgemm_c(transa_l, transb_l, n, n, n, alpha, a_p, n, b_p, n, beta, c_p, n)
+        call tcgemm_c(transa_l, transb_l, m, n, k, alpha, a_p, lda, b_p, ldb, beta, c_p, ldc)
     end subroutine
 end module
