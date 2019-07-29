@@ -4,16 +4,18 @@ program matmul_test
     implicit none
 
     ! Size of matrices
-    integer, parameter :: n = 10
+    integer, parameter :: m = 10, n = 15
 
     ! Host matrices
-    real(8), dimension(n,n) :: a1, b1, c1, a2, b2
-    real(4), dimension(n,n) :: c2
+    real(8), dimension(m,n) :: a1, b1, a2, b2
+    real(8), dimension(m,m) :: c1
+    real(4), dimension(m,m) :: c2
+    real(4) :: tick, tock
 
     integer :: i, j
 
     ! Initialize values of input matrices
-    do i = 1, n
+    do i = 1, m
         do j = 1, n
             call random_number(a1(i,j))
             call random_number(b1(i,j))
@@ -23,21 +25,27 @@ program matmul_test
     end do
 
     ! =========================================================================
-    ! Host DGEMM
+    ! Host DGEMM (with transpose)
     ! =========================================================================
 
-    c1 = matmul(a1, b1)
+    call cpu_time(tick)
+    c1 = matmul(a1, transpose(b1))
+    call cpu_time(tock)
 
-    write (*,"(A35,F13.10)") "C matrix Frobenius norm (host)   = ", frob_norm(c1)
+    write (*,"(A35,F17.10)") "C matrix Frobenius norm (host)   = ", frob_norm(c1)
+    write (*,"(A11,F13.10)") "CPU time = ", tock - tick
 
     ! =========================================================================
-    ! Device DGEMM
+    ! Device DGEMM (with transpose)
     ! =========================================================================
 
     ! Call Tensor Core GEMM routine
-    call tcgemm("N", "N", n, n, n, 1.0, a2, n, b2, n, 0.0, c2, n)
+    call cpu_time(tick)
+    call tcgemm("N", "T", m, m, n, 1.0, a2, m, b2, m, 0.0, c2, m)
+    call cpu_time(tock)
 
-    write (*,"(A35,F13.10)") "C matrix Frobenius norm (device) = ", frob_norm(real(c2,8))
+    write (*,"(A35,F17.10)") "C matrix Frobenius norm (device) = ", frob_norm(real(c2,8))
+    write (*,"(A11,F13.10)") "GPU time = ", tock - tick
 
 contains
     ! Computes Frobenius norm of input matrix
