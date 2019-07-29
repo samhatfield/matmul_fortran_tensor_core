@@ -16,7 +16,16 @@
         end subroutine
     end interface
 
+    interface
+        subroutine init_gpu_c() bind(c)
+        end subroutine
+    end interface
+
 contains
+    subroutine init_gpu
+        call init_gpu_c
+    end subroutine
+
     !> Perform matrix-matrix multiplication using Tensor Core (wrapper for C
     !  function).
     subroutine tcgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)

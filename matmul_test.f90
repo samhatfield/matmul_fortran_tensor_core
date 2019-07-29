@@ -1,5 +1,5 @@
 program matmul_test
-    use cublas_gemm_f, only: tcgemm
+    use cublas_gemm_f, only: init_gpu, tcgemm
 
     implicit none
 
@@ -38,6 +38,8 @@ program matmul_test
     ! =========================================================================
     ! Device DGEMM (with transpose)
     ! =========================================================================
+
+    call init_gpu
 
     ! Call Tensor Core GEMM routine
     call cpu_time(tick)

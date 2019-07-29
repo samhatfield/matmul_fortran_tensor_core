@@ -25,6 +25,18 @@ __global__ void double2half(half *out, const double *in, int n) {
     }
 }
 
+cublasHandle_t cublasHandle;
+
+// Sets up GPU and cuBLAS and allocates memory
+extern "C" {
+    void init_gpu_c(int m, int n, int k) {
+        cudaSetDevice(0);
+        cublasErrCheck(cublasCreate(&cublasHandle));
+        cudaDeviceReset();
+        cublasErrCheck(cublasSetMathMode(cublasHandle, CUBLAS_TENSOR_OP_MATH));
+    }
+}
+
 // Performs matrix-matrix multiplication using Tensor Core.
 extern "C" {
     void tcgemm_c(int transa, int transb, int m, int n, int k, float alpha, void *a_p, int lda, void *b_p,
@@ -40,12 +52,6 @@ extern "C" {
         // =========================================================================
         // Compute GEMM using Tensor Core
         // =========================================================================
-
-        // Set up GPU and cuBLAS
-        cublasHandle_t cublasHandle;
-        cudaSetDevice(0);
-        cudaDeviceReset();
-        cublasErrCheck(cublasCreate(&cublasHandle));
 
         // Set up device-side arrays
         double *a_d, *b_d;
@@ -71,7 +77,6 @@ extern "C" {
         cudaDeviceSynchronize();
 
         // Perform GEMM with Tensor Core
-        cublasErrCheck(cublasSetMathMode(cublasHandle, CUBLAS_TENSOR_OP_MATH));
         cublasErrCheck(
                 cublasGemmEx(
                         cublasHandle, (cublasOperation_t)transa, (cublasOperation_t)transb,
