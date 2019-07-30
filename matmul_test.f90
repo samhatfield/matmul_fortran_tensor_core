@@ -29,7 +29,7 @@ program matmul_test
     ! =========================================================================
 
     call cpu_time(tick)
-    c1 = matmul(a1, transpose(b1))
+    call dgemm("N", "T", m, m, n, 1.0d0, a1, m, b1, m, 0.0d0, c1, m)
     call cpu_time(tock)
 
     write (*,"(A35,F17.10)") "C matrix Frobenius norm (host)   = ", frob_norm(c1)
