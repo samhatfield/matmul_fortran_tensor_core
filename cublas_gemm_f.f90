@@ -17,13 +17,26 @@
     end interface
 
     interface
-        subroutine init_gpu_c() bind(c)
+        subroutine init_gpu_c(m, n, k) bind(c)
+            use iso_c_binding, only: c_int
+            integer(kind=c_int), value :: m, n, k
+        end subroutine
+    end interface
+
+    interface
+        subroutine fin_gpu_c() bind(c)
         end subroutine
     end interface
 
 contains
-    subroutine init_gpu
-        call init_gpu_c
+    subroutine init_gpu(m, n, k)
+        integer :: m, n, k
+
+        call init_gpu_c(m, n, k)
+    end subroutine
+
+    subroutine fin_gpu
+        call fin_gpu_c
     end subroutine
 
     !> Perform matrix-matrix multiplication using Tensor Core (wrapper for C

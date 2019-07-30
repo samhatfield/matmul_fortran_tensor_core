@@ -1,5 +1,5 @@
 program matmul_test
-    use cublas_gemm_f, only: init_gpu, tcgemm
+    use cublas_gemm_f, only: init_gpu, fin_gpu, tcgemm
 
     implicit none
 
@@ -39,12 +39,14 @@ program matmul_test
     ! Device DGEMM (with transpose)
     ! =========================================================================
 
-    call init_gpu
+    call init_gpu(m, m, n)
 
     ! Call Tensor Core GEMM routine
     call cpu_time(tick)
     call tcgemm("N", "T", m, m, n, 1.0, a2, m, b2, m, 0.0, c2, m)
     call cpu_time(tock)
+
+    call fin_gpu
 
     write (*,"(A35,F17.10)") "C matrix Frobenius norm (device) = ", frob_norm(real(c2,8))
     write (*,"(A11,F13.10)") "GPU time = ", tock - tick

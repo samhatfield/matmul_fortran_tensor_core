@@ -27,6 +27,11 @@ __global__ void double2half(half *out, const double *in, int n) {
 
 cublasHandle_t cublasHandle;
 
+// Device-side arrays
+double *a_d, *b_d;
+half *a_d_16, *b_d_16;
+float *c_d_32;
+
 // Sets up GPU and cuBLAS and allocates memory
 extern "C" {
     void init_gpu_c(int m, int n, int k) {
@@ -34,6 +39,25 @@ extern "C" {
         cublasErrCheck(cublasCreate(&cublasHandle));
         cudaDeviceReset();
         cublasErrCheck(cublasSetMathMode(cublasHandle, CUBLAS_TENSOR_OP_MATH));
+
+        // Allocate memory on device for all arrays
+        // TODO: should the dimensions used below (m*k etc.) take into account transa, lda etc.?
+        cudaErrCheck(cudaMalloc((void **)&a_d, m*k*sizeof(double)));
+        cudaErrCheck(cudaMalloc((void **)&b_d, k*n*sizeof(double)));
+        cudaErrCheck(cudaMalloc((void**)&a_d_16, m*k*sizeof(half)));
+        cudaErrCheck(cudaMalloc((void**)&b_d_16, k*n*sizeof(half)));
+        cudaErrCheck(cudaMalloc((void**)&c_d_32, m*n*sizeof(float)));
+    }
+}
+
+extern "C" {
+    void fin_gpu_c() {
+        // Free memory on device
+        cudaErrCheck(cudaFree(a_d));
+        cudaErrCheck(cudaFree(b_d));
+        cudaErrCheck(cudaFree(a_d_16));
+        cudaErrCheck(cudaFree(b_d_16));
+        cudaErrCheck(cudaFree(c_d_32));
     }
 }
 
@@ -53,19 +77,6 @@ extern "C" {
         // Compute GEMM using Tensor Core
         // =========================================================================
 
-        // Set up device-side arrays
-        double *a_d, *b_d;
-        half *a_d_16, *b_d_16;
-        float *c_d_32;
-
-        // Allocate memory on device for all arrays
-        // TODO: should the dimensions used below (m*k etc.) take into account transa, lda etc.?
-        cudaErrCheck(cudaMalloc((void **)&a_d, m*k*sizeof(double)));
-        cudaErrCheck(cudaMalloc((void **)&b_d, k*n*sizeof(double)));
-        cudaErrCheck(cudaMalloc((void**)&a_d_16, m*k*sizeof(half)));
-        cudaErrCheck(cudaMalloc((void**)&b_d_16, k*n*sizeof(half)));
-        cudaErrCheck(cudaMalloc((void**)&c_d_32, m*n*sizeof(float)));
-
         // Copy input arrays to device
         cudaErrCheck(cudaMemcpy(a_d, a_h, m*k*sizeof(double), cudaMemcpyHostToDevice));
         cudaErrCheck(cudaMemcpy(b_d, b_h, k*n*sizeof(double), cudaMemcpyHostToDevice));
@@ -73,8 +84,6 @@ extern "C" {
         // Convert arrays to half-precision
         double2half<<<(int)((m*k)/256) + 1, 256 >>>(a_d_16, a_d, m*k);
         double2half<<<(int)((k*n)/256) + 1, 256 >>>(b_d_16, b_d, k*n);
-
-        cudaDeviceSynchronize();
 
         // Perform GEMM with Tensor Core
         cublasErrCheck(
@@ -93,13 +102,6 @@ extern "C" {
 
         // Copy results back from device to host
         cudaErrCheck(cudaMemcpy(c_h, c_d_32, m*n*sizeof(float), cudaMemcpyDeviceToHost));
-        cudaDeviceSynchronize();
-
-        // Free memory on device
-        cudaErrCheck(cudaFree(a_d));
-        cudaErrCheck(cudaFree(b_d));
-        cudaErrCheck(cudaFree(a_d_16));
-        cudaErrCheck(cudaFree(b_d_16));
-        cudaErrCheck(cudaFree(c_d_32));
     }
 }
+
