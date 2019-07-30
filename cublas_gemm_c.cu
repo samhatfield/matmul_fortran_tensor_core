@@ -36,8 +36,8 @@ float *c_d_32;
 extern "C" {
     void init_gpu_c(int m, int n, int k) {
         cudaSetDevice(0);
-        cublasErrCheck(cublasCreate(&cublasHandle));
         cudaDeviceReset();
+        cublasErrCheck(cublasCreate(&cublasHandle));
         cublasErrCheck(cublasSetMathMode(cublasHandle, CUBLAS_TENSOR_OP_MATH));
 
         // Allocate memory on device for all arrays
